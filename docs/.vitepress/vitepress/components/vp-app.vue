@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import nprogress from 'nprogress'
 import dayjs from 'dayjs'
@@ -14,7 +14,6 @@ import VPSubNav from './vp-subnav.vue'
 import VPSidebar from './vp-sidebar.vue'
 import VPContent from './vp-content.vue'
 import VPSponsors from './vp-sponsors.vue'
-import VPReloadPrompt from './vp-reload-prompt.vue'
 
 const USER_PREFER_GITHUB_PAGE = 'USER_PREFER_GITHUB_PAGE'
 const [isSidebarOpen, toggleSidebar] = useToggle(false)
@@ -35,6 +34,15 @@ useToggleWidgets(isSidebarOpen, () => {
 })
 
 const userPrefer = useStorage<boolean | string>(USER_PREFER_GITHUB_PAGE, null)
+
+const scrollRef = ref<Element>()
+
+const handleSidebarClick = () => {
+  toggleSidebar(false)
+  if (scrollRef.value) {
+    scrollRef.value?.scrollTo({ top: 0 })
+  }
+}
 
 onMounted(async () => {
   if (!isClient) return
@@ -68,8 +76,6 @@ onMounted(async () => {
   )
 
   if (lang.value === 'zh-CN') {
-    // disable cn redirect temporarily
-    if (Math.random() < 1000) return
     if (isMirrorUrl()) return
 
     if (userPrefer.value) {
@@ -99,19 +105,17 @@ onMounted(async () => {
       userPrefer.value = String(dayjs().unix())
     }
   }
-  if (isMirrorUrl()) {
-    // unregister sw on mirror site
-    navigator?.serviceWorker?.getRegistrations().then((registrations) => {
-      for (const registration of registrations) {
-        registration.unregister()
-      }
-    })
-  }
+  // unregister sw
+  navigator?.serviceWorker?.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister()
+    }
+  })
 })
 </script>
 
 <template>
-  <div class="App">
+  <el-scrollbar ref="scrollRef" height="100vh" class="App">
     <VPOverlay
       class="overlay"
       :show="isSidebarOpen"
@@ -119,7 +123,7 @@ onMounted(async () => {
     />
     <VPNav />
     <VPSubNav v-if="hasSidebar" @open-menu="toggleSidebar(true)" />
-    <VPSidebar :open="isSidebarOpen" @close="toggleSidebar(false)">
+    <VPSidebar :open="isSidebarOpen" @close="handleSidebarClick">
       <template #top>
         <VPSponsors />
       </template>
@@ -144,9 +148,6 @@ onMounted(async () => {
         <slot name="aside-bottom" />
       </template>
     </VPContent>
-    <ClientOnly>
-      <VPReloadPrompt v-if="!isMirrorUrl()" />
-    </ClientOnly>
     <Debug />
-  </div>
+  </el-scrollbar>
 </template>

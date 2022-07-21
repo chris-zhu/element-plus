@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type {
   CSSProperties,
   ComponentInternalInstance,
@@ -13,6 +14,7 @@ import type TableLayout from '../table-layout'
 export type DefaultRow = any
 
 interface TableRefs {
+  tableWrapper: HTMLElement
   headerWrapper: HTMLElement
   footerWrapper: HTMLElement
   fixedBodyWrapper: HTMLElement
@@ -124,6 +126,7 @@ interface TableProps<T> {
         rowspan: number
         colspan: number
       }
+    | undefined
   selectOnIndeterminate?: boolean
   indent?: number
   treeProps?: {
@@ -135,6 +138,7 @@ interface TableProps<T> {
   className?: string
   style?: CSSProperties
   tableLayout: Layout
+  flexible: boolean
 }
 
 interface Sort {
@@ -259,6 +263,7 @@ export default {
     type: Boolean,
     default: false,
   },
+  flexible: Boolean,
 }
 export type {
   SummaryMethod,

@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import dayjs from 'dayjs'
 import triggerEvent from '@element-plus/test-utils/trigger-event'
 import { rAF } from '@element-plus/test-utils/tick'
@@ -39,7 +40,7 @@ const getSpinnerTextAsArray = (dom, selector) => {
 }
 
 afterEach(() => {
-  document.documentElement.innerHTML = ''
+  document.body.innerHTML = ''
 })
 
 describe('TimePicker', () => {
@@ -148,7 +149,7 @@ describe('TimePicker', () => {
     input.trigger('focus')
     await nextTick()
     ;(document.querySelector('.el-time-panel__btn.confirm') as any).click()
-    expect(vm.value instanceof Date).toBeTruthy()
+    expect(vm.value).toBeInstanceOf(Date)
   })
 
   it('should update oldValue when visible change', async () => {
@@ -220,16 +221,18 @@ describe('TimePicker', () => {
     expect(secondsDom).toBeUndefined()
   })
 
-  it('event change, focus, blur', async () => {
+  it('event change, focus, blur, keydown', async () => {
     const changeHandler = vi.fn()
     const focusHandler = vi.fn()
     const blurHandler = vi.fn()
+    const keydownHandler = vi.fn()
     const wrapper = _mount(
       `<el-time-picker
         v-model="value"
         @change="onChange"
         @focus="onFocus"
         @blur="onBlur"
+        @keydown="onKeydown"
       />`,
       () => ({ value: new Date(2016, 9, 10, 18, 40) }),
       {
@@ -243,6 +246,9 @@ describe('TimePicker', () => {
           onBlur(e) {
             return blurHandler(e)
           },
+          onKeydown(e) {
+            return keydownHandler(e)
+          },
         },
       }
     )
@@ -250,7 +256,21 @@ describe('TimePicker', () => {
     const input = wrapper.find('input')
     input.trigger('focus')
     await nextTick()
+    await rAF() // Set selection range causes focus to be retained
+    input.element.blur()
+    input.trigger('blur')
+    await nextTick()
+    await rAF() // Blur is delayed to ensure focus was not moved to popper
+    input.trigger('keydown')
+    await nextTick()
+    await rAF()
     expect(focusHandler).toHaveBeenCalledTimes(1)
+    expect(blurHandler).toHaveBeenCalledTimes(1)
+    expect(keydownHandler).toHaveBeenCalledTimes(1)
+
+    input.trigger('focus')
+    await nextTick()
+    await rAF()
     const list = document.querySelectorAll('.el-time-spinner__list')
     const hoursEl = list[0]
     const hourEl = hoursEl.querySelectorAll('.el-time-spinner__item')[4] as any
@@ -261,7 +281,6 @@ describe('TimePicker', () => {
     await nextTick()
     await nextTick() // onchange is triggered by props.modelValue update
     expect(changeHandler).toHaveBeenCalledTimes(1)
-    expect(blurHandler).toHaveBeenCalledTimes(1)
   })
 
   it('selectableRange ', async () => {
@@ -419,6 +438,36 @@ describe('TimePicker', () => {
     await nextTick()
     expect(vm.value).toEqual('2000-01-01 09:00:00')
   })
+
+  it('picker-panel should not pop up when readonly', async () => {
+    const wrapper = _mount(
+      `<el-time-picker
+        readonly
+      />`,
+      () => ({})
+    )
+    const input = wrapper.find('input')
+    await input.trigger('mousedown')
+    await nextTick()
+    expect((wrapper.findComponent(Picker).vm as any).pickerVisible).toEqual(
+      false
+    )
+  })
+
+  it('picker-panel should not pop up when disabled', async () => {
+    const wrapper = _mount(
+      `<el-time-picker
+        disabled
+      />`,
+      () => ({})
+    )
+    const input = wrapper.find('input')
+    await input.trigger('mousedown')
+    await nextTick()
+    expect((wrapper.findComponent(Picker).vm as any).pickerVisible).toEqual(
+      false
+    )
+  })
 })
 
 describe('TimePicker(range)', () => {
@@ -512,8 +561,8 @@ describe('TimePicker(range)', () => {
     await nextTick()
     ;(document.querySelector('.el-time-panel__btn.confirm') as any).click()
     expect(Array.isArray(vm.value)).toBeTruthy()
-    vm.value.forEach((_) => {
-      expect(_ instanceof Date).toBeTruthy()
+    vm.value.forEach((v: unknown) => {
+      expect(v).toBeInstanceOf(Date)
     })
   })
 
@@ -716,5 +765,74 @@ describe('TimePicker(range)', () => {
       const formItem = wrapper.find('[data-test-ref="item"]')
       expect(formItem.attributes().role).toBe('group')
     })
+  })
+
+  describe('dismiss events restore picker', () => {
+    let wrapper: ReturnType<typeof _mount>
+
+    const findInput = () =>
+      wrapper.findComponent({
+        name: 'ElInput',
+      })
+    const findClear = () => wrapper.find('.clear-icon')
+    const findPicker = () =>
+      wrapper.findComponent({
+        name: 'Picker',
+      })
+
+    beforeEach(() => {
+      wrapper = _mount(
+        `<el-time-picker v-model="value" ref="input" />`,
+        () => ({ value: new Date(2016, 9, 10, 18, 40) })
+      )
+    })
+
+    afterEach(() => {
+      wrapper.unmount()
+    })
+
+    it('should be able to focus back and callout picker after clear', async () => {
+      await nextTick()
+      const input = findInput()
+      await input.trigger('mouseenter')
+      await rAF()
+      const clearIcon = findClear()
+      await clearIcon.trigger('click')
+      await rAF()
+      expect(document.activeElement).toBe(wrapper.find('input').element)
+      expect(document.querySelector('.el-time-panel')).toBeFalsy()
+      await input.vm.$emit('input', 'a')
+      await rAF()
+      expect(document.querySelector('.el-time-panel')).toBeTruthy()
+    })
+
+    it('should be able to focus back and callout picker after pick', async () => {
+      await nextTick()
+      const picker = findPicker()
+      const input = findInput()
+      picker.vm.onPick('', false)
+      await rAF()
+      expect(document.activeElement).toBe(wrapper.find('input').element)
+      expect(document.querySelector('.el-time-panel')).toBeFalsy()
+      input.vm.$emit('input', 'a')
+      await rAF()
+      expect(document.querySelector('.el-time-panel')).toBeTruthy()
+    })
+  })
+
+  it('display value', async () => {
+    const wrapper = _mount(
+      `<el-time-picker
+        v-model="value"
+        :is-range="true"
+      />`,
+      () => ({ value: [undefined, undefined] })
+    )
+
+    await nextTick()
+
+    const [startInput, endInput] = wrapper.findAll('input')
+    expect(startInput.element.value).toBe('')
+    expect(endInput.element.value).toBe('')
   })
 })

@@ -1,6 +1,7 @@
 <template>
   <div
     v-show="type !== 'hidden'"
+    v-bind="containerAttrs"
     :class="[
       type === 'textarea' ? nsTextarea.b() : nsInput.b(),
       nsInput.m(inputSize),
@@ -18,6 +19,7 @@
       $attrs.class,
     ]"
     :style="containerStyle"
+    :role="containerRole"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
@@ -78,7 +80,7 @@
             <el-icon
               v-if="showClear"
               :class="[nsInput.e('icon'), nsInput.e('clear')]"
-              @mousedown.prevent
+              @mousedown.prevent="NOOP"
               @click="clear"
             >
               <circle-close />
@@ -172,6 +174,7 @@ import {
   View as IconView,
 } from '@element-plus/icons-vue'
 import {
+  NOOP,
   ValidateComponentsMap,
   debugWarn,
   isKorean,
@@ -208,7 +211,21 @@ const instance = getCurrentInstance()!
 const rawAttrs = useRawAttrs()
 const slots = useSlots()
 
-const attrs = useAttrs()
+const containerAttrs = computed(() => {
+  const comboBoxAttrs: Record<string, unknown> = {}
+  if (props.containerRole === 'combobox') {
+    comboBoxAttrs['aria-haspopup'] = rawAttrs['aria-haspopup']
+    comboBoxAttrs['aria-owns'] = rawAttrs['aria-owns']
+    comboBoxAttrs['aria-expanded'] = rawAttrs['aria-expanded']
+  }
+  return comboBoxAttrs
+})
+
+const attrs = useAttrs({
+  excludeKeys: computed<string[]>(() => {
+    return Object.keys(containerAttrs.value)
+  }),
+})
 const { form, formItem } = useFormItem()
 const { inputId } = useFormItemInputId(props, {
   formItemContext: formItem,
@@ -232,7 +249,9 @@ const _ref = computed(() => input.value || textarea.value)
 
 const needStatusIcon = computed(() => form?.statusIcon ?? false)
 const validateState = computed(() => formItem?.validateState || '')
-const validateIcon = computed(() => ValidateComponentsMap[validateState.value])
+const validateIcon = computed(
+  () => validateState.value && ValidateComponentsMap[validateState.value]
+)
 const passwordIcon = computed(() =>
   passwordVisible.value ? IconView : IconHide
 )
@@ -261,6 +280,7 @@ const showPwdVisible = computed(
     props.showPassword &&
     !inputDisabled.value &&
     !props.readonly &&
+    !!nativeInputValue.value &&
     (!!nativeInputValue.value || focused.value)
 )
 const isWordLimitVisible = computed(

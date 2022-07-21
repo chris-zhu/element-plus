@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   computed,
   inject,
@@ -40,7 +41,6 @@ export function useSelectStates(props) {
     selected: props.multiple ? [] : ({} as any),
     inputLength: 20,
     inputWidth: 0,
-    initialInputHeight: 0,
     optionsCount: 0,
     filteredOptionsCount: 0,
     visible: false,
@@ -210,7 +210,7 @@ export const useSelect = (props, states: States, ctx) => {
       if (props.filterable && !props.multiple) {
         states.inputLength = 20
       }
-      if (!isEqual(val, oldVal)) {
+      if (!isEqual(val, oldVal) && props.validateEvent) {
         elFormItem.validate?.('change').catch((err) => debugWarn(err))
       }
     },
@@ -338,18 +338,18 @@ export const useSelect = (props, states: States, ctx) => {
       ) as HTMLInputElement
       const _tags = tags.value
 
-      const sizeInMap =
-        states.initialInputHeight ||
-        getComponentSize(selectSize.value || elForm.size)
-      input.style.height =
-        states.selected.length === 0
-          ? `${sizeInMap}px`
-          : `${Math.max(
+      const sizeInMap = getComponentSize(selectSize.value || elForm.size)
+      // it's an inner input so reduce it by 2px.
+      input.style.height = `${
+        (states.selected.length === 0
+          ? sizeInMap
+          : Math.max(
               _tags
                 ? _tags.clientHeight + (_tags.clientHeight > sizeInMap ? 6 : 0)
                 : 0,
               sizeInMap
-            )}px`
+            )) - 2
+      }px`
 
       states.tagInMultiLine = Number.parseFloat(input.style.height) >= sizeInMap
 
@@ -761,8 +761,15 @@ export const useSelect = (props, states: States, ctx) => {
     states.visible = false
   }
 
+  const handleKeydownEscape = (event: KeyboardEvent) => {
+    if (states.visible) {
+      event.preventDefault()
+      event.stopPropagation()
+      states.visible = false
+    }
+  }
+
   const toggleMenu = () => {
-    if (props.automaticDropdown) return
     if (!selectDisabled.value) {
       if (states.menuVisibleOnFocus) {
         states.menuVisibleOnFocus = false
@@ -860,6 +867,7 @@ export const useSelect = (props, states: States, ctx) => {
     handleBlur,
     handleClearClick,
     handleClose,
+    handleKeydownEscape,
     toggleMenu,
     selectOption,
     getValueKey,

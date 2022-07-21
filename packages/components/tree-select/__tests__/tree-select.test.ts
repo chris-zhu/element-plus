@@ -100,6 +100,7 @@ describe('TreeSelect.vue', () => {
         modelValue: value,
         checkStrictly: true,
         showCheckbox: true,
+        checkOnClickNode: true,
       },
     })
 
@@ -152,6 +153,7 @@ describe('TreeSelect.vue', () => {
         showCheckbox: true,
         checkStrictly: true,
         defaultExpandAll: true,
+        checkOnClickNode: true,
       },
     })
 
@@ -173,6 +175,7 @@ describe('TreeSelect.vue', () => {
         checkStrictly: true,
         showCheckbox: true,
         multiple: true,
+        checkOnClickNode: true,
       },
     })
 
@@ -197,7 +200,7 @@ describe('TreeSelect.vue', () => {
 
     await tree.find('.el-tree-node__content').trigger('click')
     await nextTick()
-    expect(select.vm.modelValue).toEqual([11, 111, 1])
+    expect(select.vm.modelValue).toEqual([1, 11, 111])
     expect(wrapperRef.getCheckedKeys()).toEqual([1, 11, 111])
 
     await tree.findAll('.el-checkbox')[1].trigger('click')
@@ -310,5 +313,107 @@ describe('TreeSelect.vue', () => {
     await tree.find('.el-tree-node').trigger('click')
     await nextTick()
     expect(onNodeClick).toBeCalled()
+  })
+
+  test('check-strictly showCheckbox clik node', async () => {
+    const { getWrapperRef, select, tree } = createComponent({
+      props: {
+        checkStrictly: true,
+        showCheckbox: true,
+        multiple: true,
+      },
+    })
+
+    const wrapperRef = await getWrapperRef()
+    await tree.findAll('.el-tree-node__content')[0].trigger('click')
+    await nextTick()
+    expect(select.vm.modelValue).toEqual([])
+    expect(wrapperRef.getCheckedKeys()).toEqual([])
+
+    await tree
+      .findAll('.el-tree-node__content .el-checkbox')[0]
+      .trigger('click')
+    await nextTick()
+    expect(select.vm.modelValue).toEqual([1])
+    expect(wrapperRef.getCheckedKeys()).toEqual([1])
+  })
+
+  test('check-strictly showCheckbox checkOnClickNode clik node', async () => {
+    const { getWrapperRef, select, tree } = createComponent({
+      props: {
+        checkStrictly: true,
+        showCheckbox: true,
+        multiple: true,
+        checkOnClickNode: true,
+      },
+    })
+
+    const wrapperRef = await getWrapperRef()
+    await tree.findAll('.el-tree-node__content')[0].trigger('click')
+    await nextTick()
+    expect(select.vm.modelValue).toEqual([1])
+    expect(wrapperRef.getCheckedKeys()).toEqual([1])
+
+    await tree
+      .findAll('.el-tree-node__content .el-checkbox')[0]
+      .trigger('click')
+    await nextTick()
+    expect(select.vm.modelValue).toEqual([])
+    expect(wrapperRef.getCheckedKeys()).toEqual([])
+  })
+
+  test('only show checkbox', async () => {
+    const { select, tree } = createComponent({
+      props: {
+        showCheckbox: true,
+      },
+    })
+
+    // check child node when folder node checked,
+    // value.value will be 111
+    await tree
+      .find('.el-tree-node__content .el-checkbox__original')
+      .trigger('click')
+    await nextTick()
+    expect(select.vm.modelValue).equal(111)
+
+    // unselect when has child checked
+    await tree
+      .find('.el-tree-node__content .el-checkbox__original')
+      .trigger('click')
+    await nextTick()
+    expect(select.vm.modelValue).toBe(undefined)
+  })
+
+  test('show checkbox and check on click node', async () => {
+    const { select, tree } = createComponent({
+      props: {
+        showCheckbox: true,
+        checkOnClickNode: true,
+      },
+    })
+
+    // check child node when folder node checked,
+    // value.value will be 111
+    await tree.findAll('.el-tree-node__content').slice(-1)[0].trigger('click')
+    await nextTick()
+    expect(select.vm.modelValue).equal(111)
+
+    // unselect when has child checked
+    await tree.findAll('.el-tree-node__content').slice(-1)[0].trigger('click')
+    await nextTick()
+    expect(select.vm.modelValue).toBe(undefined)
+  })
+
+  test('expand selected node`s parent in first time', async () => {
+    const value = ref(111)
+    const { tree } = createComponent({
+      props: {
+        modelValue: value,
+      },
+    })
+
+    expect(tree.findAll('.is-expanded[data-key="1"]').length).toBe(1)
+    expect(tree.findAll('.is-expanded[data-key="11"]').length).toBe(1)
   })
 })

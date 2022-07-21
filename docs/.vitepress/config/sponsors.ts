@@ -2,22 +2,24 @@ export const rightRichTextSponsors = [
   {
     name: 'Fantastic-admin',
     img: '/images/sponsors/fantasticadmin.png',
-    url: 'https://fantastic-admin.netlify.app/?from=element-plus',
+    url: 'https://hooray.gitee.io/fantastic-admin/?from=element-plus',
     slogan: 'An out-of-the-box backend framework',
-    slogan_cn: '开箱即用的 Vue 后台管理框架',
+    slogan_cn: '开箱即用的后台框架 为开发提供舒适体验',
+  },
+]
+
+export const rightLogoSmallSponsors = [
+  {
+    name: 'BuildAdmin',
+    img: '/images/sponsors/buildadmin.png',
+    imgL: '/images/sponsors/buildadmin-l.png',
+    url: 'https://wonderful-code.gitee.io/?from=element-plus',
+    slogan: 'Vue3 opensource admin system',
+    slogan_cn: 'Vue3企业级开源后台管理系统',
   },
 ]
 
 export const leftCustomImgSponsors = [
-  {
-    name: 'JNPF',
-    img: '/images/jnpf_index.png',
-    url: 'https://www.jnpfsoft.com/index.html?from=elementUI',
-    slogan: 'JNPF low code development platform to develop simple!',
-    slogan_cn: 'JNPF 低代码开发平台，让开发变得简单！',
-    className: 'jnpf',
-    banner_img: '/images/jnpfsoft.jpg',
-  },
   {
     name: 'VForm',
     img: '/images/vform.png',
@@ -42,7 +44,7 @@ export const platinumSponsors = [
   ...rightRichTextSponsors,
 ]
 
-export const goldSponsors = [
+export const leftLogoSponsors = [
   {
     name: 'bit',
     img: '/images/bit.svg',
@@ -68,3 +70,5 @@ export const goldSponsors = [
     slogan_cn: 'Vue表单设计器，赋能企业快速开发',
   },
 ]
+
+export const goldSponsors = [...rightLogoSmallSponsors, ...leftLogoSponsors]
